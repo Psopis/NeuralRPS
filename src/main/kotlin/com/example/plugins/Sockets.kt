@@ -1,12 +1,11 @@
 package com.example.plugins
 
+import com.example.Lobbyfounds
 import com.example.objects.UserConnections
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import java.time.Duration
 import io.ktor.server.application.*
-import io.ktor.server.response.*
-import io.ktor.server.request.*
 import io.ktor.server.routing.*
 import kotlinx.coroutines.channels.BroadcastChannel
 import kotlinx.coroutines.channels.consumeEach
@@ -24,17 +23,17 @@ fun Application.configureSockets() {
     }
 
     routing {
-
-        webSocket("/passenger/{idpassenger}") {
-            val idpassenger = call.parameters["idpassenger"].toString()
-            if (idpassenger == null) close()
+            if(Lobbyfounds() != 0){
+        webSocket("/userconnect/${Lobbyfounds()}") {
+            val idlobby= call.parameters["idlobby"].toString()
+            if (idlobby == null) close()
 
             launch {
-                var driver = mutableSet.find { idpassenger == it.id } ?: UserConnections()
+                var lobby = mutableSet.find { idlobby == it.id } ?: UserConnections()
 
 
-                println("driver $driver")
-                driver?.let {
+                println("lobby++ $lobby")
+                lobby?.let {
                     it.channel.consumeEach { frame ->
                         send(frame.copy())
                         println("frame.copy()  ${frame.copy()}")
@@ -43,23 +42,26 @@ fun Application.configureSockets() {
 
             }.join()
 
-        }
-        webSocket("/driver/{idDriver}") {
-            val idDriver = call.parameters["idDriver"]
-            if (idDriver == null) close(CloseReason(CloseReason.Codes.NORMAL, "Driver is null"))
+        }}
+        else{
+        webSocket("/lobby/{idlobby}") {
+            val idLobby = call.parameters["idlobby"]
+            if (idLobby == null) close(CloseReason(CloseReason.Codes.NORMAL, "lobby is null"))
             else {
 //            val broadcastChannel = Channel<Frame>()
 //            listsOfChannels.put(idDriver, broadcastChannel.broadcast())
-                var driver = mutableSet.find { idDriver == it.id }
-                if (driver != null) {
-                    driver.connection = this
+
+                var lobby = mutableSet.find { idLobby == it.id }
+                if (lobby != null) {
+                    lobby.connection = this
                 } else {
-                    driver = UserConnections(idDriver, this)
-                    driver.connection = this
-                    mutableSet.add(driver)
+                    lobby = UserConnections(idLobby, this)
+                    lobby.connection = this
+                    mutableSet.add(lobby)
                 }
-                driver.startBroadcast()
+                lobby.startBroadcast()
             }
+        }
         }
     }
 }
